@@ -93,7 +93,7 @@ func (dl *DrawList) Add(commands ...*DrawCommand) {
 			dl.vx, dl.ix, batch.end, opts,
 		)
 
-		//if len(dl.ix) >=
+		// if len(dl.ix) >=
 
 		batch.end++
 	}
@@ -173,4 +173,50 @@ func (dl *DrawList) FlushWithShader(dst *ebiten.Image, shader *ebiten.Shader, op
 	dl.ranges = dl.ranges[:0]
 	dl.vx = dl.vx[:0]
 	dl.ix = dl.ix[:0]
+}
+
+func NewDDListMultiple(size int) *DraListMultiple {
+	return &DraListMultiple{
+		lists: make([]*DrawList, size),
+	}
+}
+
+type DraListMultiple struct {
+	lists []*DrawList
+}
+
+func (dd1 *DraListMultiple) Add(index int, list *DrawList) {
+	dd1.lists[index] = list
+}
+
+func (dd1 *DraListMultiple) Flush(dst *ebiten.Image, opts *DrawOptions) {
+	var topts *ebiten.DrawTrianglesOptions
+	if opts != nil {
+		topts = &ebiten.DrawTrianglesOptions{
+			ColorScaleMode: opts.ColorScaleMode,
+			Blend:          opts.Blend,
+			Filter:         opts.Filter,
+			Address:        opts.Address,
+			AntiAlias:      opts.AntiAlias,
+		}
+	}
+	for _, dl := range dd1.lists {
+		index := 0
+		if dl == nil {
+			continue
+		}
+		for _, r := range dl.ranges {
+			dst.DrawTriangles(
+				dl.vx[index*4:(index+r.end)*4],
+				dl.ix[index*6:(index+r.end)*6],
+				r.atlas.native,
+				topts,
+			)
+			index += r.end
+		}
+		// Clear buffers
+		dl.ranges = dl.ranges[:0]
+		dl.vx = dl.vx[:0]
+		dl.ix = dl.ix[:0]
+	}
 }
